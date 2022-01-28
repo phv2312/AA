@@ -64,6 +64,22 @@ def imshow(im):
     plt.show()
 
 
+def get_contour(gray_np_image):
+    """
+
+    :param gray_np_image:
+    :return:
+    """
+
+    _, contours, hierarchy = cv2.findContours(gray_np_image, cv2.RETR_TREE, cv2.CHAIN_APPROX_NONE)
+
+    if len(contours) > 0:
+        boundary_contour = sorted(contours, key=lambda elem: len(elem))[-1]
+        return boundary_contour, contours
+    else:
+        return None, contours
+
+
 if __name__ == '__main__':
     image_path = r"./../data/tobi.jpg"
     im = cv2.imread(image_path)
