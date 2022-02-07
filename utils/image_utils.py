@@ -3,11 +3,12 @@ import matplotlib.pyplot as plt
 import numpy as np
 import skimage.measure as measure
 
+
 class ConnectedComponentRegion:
     def __init__(self, region):
-        self.coords = region['coords'] # list of row, col
-        self.area = region['area'] # number of pixels in the component
-        self.rgb_color  = None
+        self.coords = region['coords']  # list of row, col
+        self.area = region['area']  # number of pixels in the component
+        self.rgb_color = None
 
     def update_rgb_color(self, rgb_image):
         sampling_coord = self.coords[0]
@@ -19,6 +20,7 @@ def get_component(np_image, background_value=0):
     """
     Run measure.label for the given image
     :param np_image:
+    :param background_value
     :return:
     """
 
@@ -32,18 +34,19 @@ def get_component(np_image, background_value=0):
     return cc_list
 
 
-def heuristic_segment_character(np_image, background_image=(255,255,255)):
+def heuristic_segment_character(np_image, background_color=(255, 255, 255)):
     """
     Use heuristic rules to segment the anime character out of image
     One character per image
     :param np_image:
+    :param background_color
     :return:
     """
 
     ys, xs = np.where(
-        (np_image[:,:,0] == background_image[0]) &
-        (np_image[:,:,1] == background_image[1]) &
-        (np_image[:,:,2] == background_image[2])
+        (np_image[:, :, 0] == background_color[0]) &
+        (np_image[:, :, 1] == background_color[1]) &
+        (np_image[:, :, 2] == background_color[2])
     )
 
     mask = np.zeros(shape=(np_image.shape[0], np_image.shape[1]), dtype=np.uint8)
@@ -71,7 +74,7 @@ def get_contour(gray_np_image):
     :return:
     """
 
-    _, contours, hierarchy = cv2.findContours(gray_np_image, cv2.RETR_TREE, cv2.CHAIN_APPROX_NONE)
+    contours = cv2.findContours(gray_np_image, cv2.RETR_TREE, cv2.CHAIN_APPROX_NONE)[0]
 
     if len(contours) > 0:
         boundary_contour = sorted(contours, key=lambda elem: len(elem))[-1]

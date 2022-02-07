@@ -7,9 +7,11 @@ from lib.interfaces import Mesh
 from lib.mc.mc import TriangleMeshCreator
 from lib.md.deform import ARAPDeformation
 from utils import image_utils as im_utils
+from utils import render_utils
 
 
 VISUALIZE = True
+DEFORM_MESH_PATH = './deformed_mesh.obj'
 
 
 def augment_handle_points(poses2d, size):
@@ -19,12 +21,13 @@ def augment_handle_points(poses2d, size):
     return target_poses2d
 
 
-def save_obj_format(file_path, vertices, faces):
+def save_obj_format(file_path, vertices, faces, texture_vertices=None):
     """
     Save obj wavefront to file
     :param file_path:
-    :param vertices:
+    :param vertices: in range [-1.,1.]
     :param faces:
+    :param texture_vertices
     :return:
     """
 
@@ -42,11 +45,18 @@ def save_obj_format(file_path, vertices, faces):
         v = vertices[i]
         f.write("v %.4f %.4f %d\n" % (v[0], v[1], 0))
 
+    # vertices texture
+    if texture_vertices is not None:
+        # the origin of texture vertices are not TOP-LEFT, but BOT-LEFT
+        for i in range(no_v):
+            v = texture_vertices[i]
+            f.write("vt %.4f %.4f\n" % (v[0], v[1]))
+
     # triangle faces
     for t in faces:
         f.write("f")
         for i in t:
-            f.write(" %d" % (i))
+            f.write(" %d/%d" % (i,i))
         f.write("\n")
 
     f.close()
@@ -92,20 +102,30 @@ def main():
     #
     constraint_v_coords = Mesh.normalize_vertices(constraint_v_coords, size=(w, h))
 
-    #
-    save_obj_format(file_path='./source_mesh.obj', vertices=mesh.vertices, faces=mesh.faces)
-    np.save('selected.npy', constraint_v_ids)
-    np.save('locations.npy', constraint_v_coords)
+    # build vertices texture
+    vts = 0.5 * (mesh.vertices + 1)
+    vts[:, 1] = 1. - vts[:, 1]
 
-    #
+    # deform
     arap_deform = ARAPDeformation()
     arap_deform.load_from_mesh(mesh)
     arap_deform.setup()
 
     deformed_mesh = arap_deform.deform(constraint_v_ids, constraint_v_coords, w=1000.)
+    save_obj_format(file_path=DEFORM_MESH_PATH, vertices=deformed_mesh.vertices, faces=deformed_mesh.faces,
+                    texture_vertices=vts)
 
-    vis_image = deformed_mesh.get_image(size=(w, h))
-    im_utils.imshow(vis_image)
+    if VISUALIZE:
+        vis_image = deformed_mesh.get_image(size=(w, h))
+        im_utils.imshow(vis_image)
+
+    #
+    pt_renderer = render_utils.PytorchRenderer(use_gpu=False)
+    deformed_image = pt_renderer.render_w_texture(DEFORM_MESH_PATH, image_path)
+    deformed_image = deformed_image[::-1, :, :]
+    deformed_image = cv2.cvtColor(deformed_image, cv2.COLOR_BGR2RGB)
+
+    im_utils.imshow(deformed_image)
 
 
 if __name__ == '__main__':
