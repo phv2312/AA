@@ -74,7 +74,13 @@ def get_contour(gray_np_image):
     :return:
     """
 
-    contours = cv2.findContours(gray_np_image, cv2.RETR_TREE, cv2.CHAIN_APPROX_NONE)[0]
+    version = cv2.__version__[0]
+    if version == str(4):
+        contours, hierarchy = cv2.findContours(gray_np_image, cv2.RETR_TREE, cv2.CHAIN_APPROX_NONE)
+    elif version == str(3):
+        img, contours, hierarchy = cv2.findContours(gray_np_image, cv2.RETR_TREE, cv2.CHAIN_APPROX_NONE)
+    else:
+        raise EnvironmentError('cv2 version should be 3 or 4.')
 
     if len(contours) > 0:
         boundary_contour = sorted(contours, key=lambda elem: len(elem))[-1]
